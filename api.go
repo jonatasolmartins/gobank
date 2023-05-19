@@ -65,13 +65,11 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 	i, err := strconv.Atoi(id)
 
 	if err != nil {
-		fmt.Println("bad request: $f", err)
 		return WriteJSON(w, http.StatusBadRequest, nil)
 	}
 
 	account, err := s.store.GetAccountByID(i)
 	if err != nil {
-		fmt.Println("bad request: $f", err)
 		return WriteJSON(w, http.StatusBadRequest, nil)
 	}
 
@@ -125,3 +123,4 @@ func makeHTTPHandleFunc(f apifunc) http.HandlerFunc {
 		}
 	}
 }
+
