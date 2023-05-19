@@ -11,7 +11,7 @@ type Storage interface {
 	UpdateAccount(*Account) error
 	GetAccountByID(int) (*Account, error)
 	GetAccounts() ([]*Account, error)
-	DeleteAccount(int) error
+	DeleteAccount(int) (bool, error)
 }
 
 type PostgreesStorage struct {
@@ -121,6 +121,10 @@ func (s *PostgreesStorage) GetAccounts() ([]*Account, error) {
 	return accounts, nil
 }
 
-func (s *PostgreesStorage) DeleteAccount(id int) error {
-	return nil
+func (s *PostgreesStorage) DeleteAccount(id int) (bool, error) {
+	_, err := s.db.Query("DELETE FROM account WHERE id = $1", id)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
