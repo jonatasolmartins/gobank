@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 
 	_ "github.com/lib/pq"
 )
@@ -11,7 +12,7 @@ type Storage interface {
 	UpdateAccount(*Account) error
 	GetAccountByID(int) (*Account, error)
 	GetAccounts() ([]*Account, error)
-	DeleteAccount(int) (bool, error)
+	DeleteAccount(int) error
 }
 
 type PostgreesStorage struct {
@@ -69,26 +70,11 @@ func (s *PostgreesStorage) GetAccountByID(id int) (*Account, error) {
 		return nil, err
 	}
 
-	account := new(Account)
-
 	for rows.Next() {
-
-		err := rows.Scan(
-			&account.ID,
-			&account.FisrtName,
-			&account.LastName,
-			&account.Number,
-			&account.Balance,
-			&account.CreatedAt,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
+		return scanIntoAccount(rows)
 	}
 
-	return account, nil
+	return nil, fmt.Errorf("account %d not found", id)
 }
 
 func (s *PostgreesStorage) GetAccounts() ([]*Account, error) {
@@ -101,30 +87,33 @@ func (s *PostgreesStorage) GetAccounts() ([]*Account, error) {
 	accounts := []*Account{}
 
 	for rows.Next() {
-		account := new(Account)
-		err := rows.Scan(
-			&account.ID,
-			&account.FisrtName,
-			&account.LastName,
-			&account.Number,
-			&account.Balance,
-			&account.CreatedAt,
-		)
-
+		account, err := scanIntoAccount(rows)
 		if err != nil {
 			return nil, err
 		}
-
 		accounts = append(accounts, account)
 	}
 
 	return accounts, nil
 }
 
-func (s *PostgreesStorage) DeleteAccount(id int) (bool, error) {
+func (s *PostgreesStorage) DeleteAccount(id int) error {
 	_, err := s.db.Query("DELETE FROM account WHERE id = $1", id)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
+}
+
+func scanIntoAccount(rows *sql.Rows) (*Account, error) {
+	account := new(Account)
+	err := rows.Scan(
+		&account.ID,
+		&account.FisrtName,
+		&account.LastName,
+		&account.Number,
+		&account.Balance,
+		&account.CreatedAt,
+	)
+	return account, err
 }
