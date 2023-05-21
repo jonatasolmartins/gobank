@@ -67,16 +67,19 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 
 	loginRequest := new(LoginRequest)
 	if err := json.NewDecoder(r.Body).Decode(loginRequest); err != nil {
-		return err
+		return fmt.Errorf("account not found")
 	}
 
-	//TODO: Get account by account number
-	//TODO: Validade login credential
-
-	account, err := s.store.GetAccountByID(1)
+	account, err := s.store.GetAccountByNumber(loginRequest.AccountNumber)
 	if err != nil {
-		return err
+		return fmt.Errorf("account not found")
 	}
+
+	err = account.ValidatePassword(loginRequest.Password)
+	if err != nil {
+		return fmt.Errorf("account not found")
+	}
+
 	token, err := createJWTToken(account)
 	if err != nil {
 		w.Header().Set("redirect", "/login")
@@ -114,18 +117,26 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
-	account := NewAccount(createAccountRequest.FisrtName, createAccountRequest.LastName)
+	account, err := NewAccount(createAccountRequest.FisrtName, createAccountRequest.LastName, createAccountRequest.Password)
+	if err != nil {
+		return fmt.Errorf("an error occured while creating account")
+	}
+
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}
 
 	token, err := createJWTToken(account)
 	if err != nil {
-		w.Header().Set("redirect", "/login")
+		return err
 	}
 
-	w.Header().Set("x-jwt-token", token)
-	return WriteJSON(w, http.StatusOK, account)
+	response := LoginResponse{
+		AccountNumber: account.Number,
+		Token:         token,
+	}
+
+	return WriteJSON(w, http.StatusOK, response)
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
@@ -183,27 +194,31 @@ func WriteJSON(w http.ResponseWriter, statusCode int, content any) error {
 func withJWTAUTH(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		tokeString := r.Header.Get("x-jwt-token")
+		tokeString := r.Header.Get("token")
 		token, err := validateJWT(tokeString)
 
 		if err != nil {
+			fmt.Println("1", err)
 			permissionDenied(w)
 			return
 		}
 
 		id, err := getID(r)
 		if err != nil {
+			fmt.Println("2", err)
 			permissionDenied(w)
 			return
 		}
 
 		account, err := s.GetAccountByID(id)
 		if err != nil {
+			fmt.Println("3", err)
 			permissionDenied(w)
 			return
 		}
 
 		if account.Number != token.Claims.(*UserClaims).AccountNumber {
+			fmt.Println("4", err)
 			permissionDenied(w)
 			return
 		}
@@ -215,15 +230,17 @@ func withJWTAUTH(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
 func validateJWT(tokenString string) (*jwt.Token, error) {
 
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
-		// Don't forget to validate the alg is what you expect:
+		fmt.Println("passow aqui")
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 		secret := os.Getenv("JWT_SECRET")
+		fmt.Println("secret %l", secret)
 		hmacSampleSecret := []byte(secret)
 		return hmacSampleSecret, nil
 	})
 
+	fmt.Println(token, err)
 	if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
 		fmt.Println("Account number: %D, ExpireAte: %l", claims.AccountNumber, claims.ExpiresAt)
 		return token, nil

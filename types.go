@@ -5,11 +5,17 @@ import (
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type LoginRequest struct {
 	AccountNumber int64  `json:"accountnumber"`
 	Password      string `json:"password"`
+}
+
+type LoginResponse struct {
+	AccountNumber int64  `json:"accountnumber"`
+	Token         string `json:"token"`
 }
 
 type TransferRequest struct {
@@ -24,21 +30,40 @@ type UserClaims struct {
 type CreateAccountRequest struct {
 	FisrtName string `json:"firstname"`
 	LastName  string `json:"lastname"`
-}
-type Account struct {
-	ID        int64     `json:"id"`
-	FisrtName string    `json:"firstname"`
-	LastName  string    `json:"lastname"`
-	Number    int64     `json:"number"`
-	Balance   int64     `json:"balance"`
-	CreatedAt time.Time `json:"createdAt"`
+	Password  string `json:"password"`
 }
 
-func NewAccount(fisrtName, lastName string) *Account {
-	return &Account{
-		FisrtName: fisrtName,
-		LastName:  lastName,
-		Number:    int64(rand.Intn(1000000)),
-		CreatedAt: time.Now().UTC(),
+type Account struct {
+	ID                int64     `json:"id"`
+	FisrtName         string    `json:"firstname"`
+	LastName          string    `json:"lastname"`
+	Number            int64     `json:"number"`
+	EncryptedPassword string    `json:"_"`
+	Balance           int64     `json:"balance"`
+	CreatedAt         time.Time `json:"createdAt"`
+}
+
+func NewAccount(fisrtName, lastName, password string) (*Account, error) {
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Account{
+		FisrtName:         fisrtName,
+		LastName:          lastName,
+		Number:            int64(rand.Intn(1000000)),
+		EncryptedPassword: string(hashedPassword),
+		CreatedAt:         time.Now().UTC(),
+	}, nil
+}
+
+func (a *Account) ValidatePassword(password string) error {
+	err := bcrypt.CompareHashAndPassword([]byte(a.EncryptedPassword), []byte(password))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
