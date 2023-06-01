@@ -8,4 +8,4 @@ seed: build
 	@./bin/gobank --seed
 
 test:
-	@go test -v unit_test.go
+	@go test -v ./testing/unit_test.go

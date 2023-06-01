@@ -1,4 +1,4 @@
-package main
+package gobank
 
 import (
 	"math/rand"

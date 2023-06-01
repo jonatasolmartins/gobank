@@ -1,4 +1,4 @@
-package main
+package gobank
 
 import (
 	"encoding/json"
@@ -32,38 +32,38 @@ func (s *APIServer) Run() {
 	  So for this part it's ok to use this 3rd party package
 	*/
 	router := mux.NewRouter()
-	router.HandleFunc("/account/login", makeHTTPHandleFunc(s.handleLogin))
-	router.HandleFunc("/account", makeHTTPHandleFunc(s.handleAccount))
-	router.HandleFunc("/account/{id}", withJWTAUTH(makeHTTPHandleFunc(s.handleAccountByID), s.store))
-	router.HandleFunc("/account/transfer", makeHTTPHandleFunc(s.handleTransfer))
+	router.HandleFunc("/account/login", MakeHTTPHandleFunc(s.HandleLogin))
+	router.HandleFunc("/account", MakeHTTPHandleFunc(s.HandleAccount))
+	router.HandleFunc("/account/{id}", withJWTAUTH(MakeHTTPHandleFunc(s.HandleAccountByID), s.store))
+	router.HandleFunc("/account/transfer", MakeHTTPHandleFunc(s.HandleTransfer))
 	fmt.Println("JSON API server running on port: ", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, router)
 }
 
-func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) HandleAccount(w http.ResponseWriter, r *http.Request) error {
 	if r.Method == "GET" {
-		return s.handleGetAccount(w, r)
+		return s.HandleGetAccount(w, r)
 	}
 	if r.Method == "POST" {
-		return s.handleCreateAccount(w, r)
+		return s.HandleCreateAccount(w, r)
 	}
 	return fmt.Errorf("method not allowed %s", r.Method)
 }
 
-func (s *APIServer) handleAccountByID(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) HandleAccountByID(w http.ResponseWriter, r *http.Request) error {
 
 	if r.Method == "GET" {
-		return s.handleGetAccountByID(w, r)
+		return s.HandleGetAccountByID(w, r)
 	}
 
 	if r.Method == "DELETE" {
-		return s.handleDeleteAccount(w, r)
+		return s.HandleDeleteAccount(w, r)
 	}
 
 	return fmt.Errorf("method not allowed %s", r.Method)
 }
 
-func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) HandleLogin(w http.ResponseWriter, r *http.Request) error {
 
 	loginRequest := new(LoginRequest)
 	if err := json.NewDecoder(r.Body).Decode(loginRequest); err != nil {
@@ -88,7 +88,7 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("x-jwt-token", token)
 	return WriteJSON(w, http.StatusOK, account)
 }
-func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) HandleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
 	id, err := getID(r)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 	return WriteJSON(w, http.StatusOK, account)
 }
 
-func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) HandleGetAccount(w http.ResponseWriter, r *http.Request) error {
 
 	accounts, err := s.store.GetAccounts()
 	if err != nil {
@@ -110,7 +110,7 @@ func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) err
 	return WriteJSON(w, http.StatusOK, accounts)
 }
 
-func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) HandleCreateAccount(w http.ResponseWriter, r *http.Request) error {
 
 	createAccountRequest := new(CreateAccountRequest)
 	if err := json.NewDecoder(r.Body).Decode(createAccountRequest); err != nil {
@@ -139,7 +139,7 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	return WriteJSON(w, http.StatusOK, response)
 }
 
-func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
 	id, err := getID(r)
 	if err != nil {
 		return err
@@ -152,7 +152,7 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 	return WriteJSON(w, http.StatusOK, map[string]int{"Deleted": id})
 }
 
-func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) HandleTransfer(w http.ResponseWriter, r *http.Request) error {
 	transferRequest := new(TransferRequest)
 	if err := json.NewDecoder(r.Body).Decode(transferRequest); err != nil {
 		return err
