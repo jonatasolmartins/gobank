@@ -267,9 +267,9 @@ func createJWTToken(account *Account) (string, error) {
 	return tokenString, err
 }
 
-type apifunc func(w http.ResponseWriter, r *http.Request) error
+type Apifunc func(w http.ResponseWriter, r *http.Request) error
 
-func makeHTTPHandleFunc(f apifunc) http.HandlerFunc {
+func MakeHTTPHandleFunc(f Apifunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r); err != nil {
 			WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
