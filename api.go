@@ -1,4 +1,4 @@
-package gobank
+package main
 
 import (
 	"encoding/json"
